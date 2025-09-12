@@ -1,13 +1,14 @@
 import { NavLink, Outlet } from "react-router-dom";
 
 export default function Layout() {
-  const link = "block rounded px-3 py-2 text-sm font-medium hover:bg-gray-100";
+  const link =
+    "block rounded px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100";
   const active = "bg-gray-200";
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-gray-50">
       {/* Sidebar */}
-      <aside className="w-60 border-r bg-white">
+      <aside className="w-64 shrink-0 border-r bg-white h-screen sticky top-0">
         <div className="p-4 font-semibold">FieldCraft Cloud</div>
         <nav className="p-2 space-y-1">
           <NavLink to="/" end className={({isActive}) => `${link} ${isActive?active:""}`}>Fleet</NavLink>
@@ -17,8 +18,8 @@ export default function Layout() {
       </aside>
 
       {/* Main */}
-      <main className="flex-1">
-        <header className="h-14 border-b bg-white px-4 flex items-center justify-between">
+      <main className="flex-1 min-w-0">
+        <header className="h-14 border-b bg-white/70 backdrop-blur px-4 flex items-center justify-between sticky top-0">
           <div className="font-medium">Remote Monitoring</div>
         </header>
         <div className="p-6">
