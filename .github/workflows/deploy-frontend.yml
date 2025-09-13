@@ -1,0 +1,54 @@
+name: Deploy frontend
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Avoid two deploys at once
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: true
+
+permissions:
+  id-token: write   # OIDC
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      # Assume your GitHubDeployRole via OIDC (no long-lived secrets)
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::309168475318:role/GitHubDeployRole
+          aws-region: us-east-1
+
+      # Read bucket + distribution from the CloudFormation stack outputs
+      - name: Read infra outputs
+        id: cfn
+        run: |
+          BUCKET=$(aws cloudformation describe-stacks --region us-east-1 --stack-name CdkStack \
+            --query "Stacks[0].Outputs[?OutputKey=='BucketName'].OutputValue" --output text)
+          DIST=$(aws cloudformation describe-stacks --region us-east-1 --stack-name CdkStack \
+            --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" --output text)
+          echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
+          echo "dist=$DIST" >> $GITHUB_OUTPUT
+
+      - name: Upload to S3
+        run: aws s3 sync ./dist s3://${{ steps.cfn.outputs.bucket }}/ --delete
+
+      - name: Invalidate CloudFront
+        run: aws cloudfront create-invalidation --distribution-id ${{ steps.cfn.outputs.dist }} --paths "/*"
